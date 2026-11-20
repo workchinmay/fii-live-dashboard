@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FII / FPI Depository Flow Terminal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+  <div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-white">FII / FPI Depository Flow Terminal</h1>
+        <p id="meta-line" class="text-xs text-slate-400 mt-1">Loading NSDL / CDSL telemetry...</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="setRange('7')" class="range-btn px-3 py-1.5 rounded text-xs font-semibold bg-slate-900 text-slate-300" data-r="7">7D</button>
+        <button onclick="setRange('30')" class="range-btn px-3 py-1.5 rounded text-xs font-semibold bg-emerald-500 text-slate-950" data-r="30">30D</button>
+        <button onclick="setRange('ALL')" class="range-btn px-3 py-1.5 rounded text-xs font-semibold bg-slate-900 text-slate-300" data-r="ALL">ALL</button>
+        <button onclick="exportCSV()" class="px-3 py-1.5 rounded text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white">Export CSV</button>
+      </div>
+    </header>
+
+    <!-- KPI Cards -->
+    <section id="kpi-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></section>
+
+    <!-- Main Flow Chart -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-slate-200">Daily FPI Equity Flows (Secondary vs. Primary) & Cumulative Trend (₹ Cr)</h2>
+        <span class="text-[11px] text-slate-500">Click any bar to inspect that session's Derivatives OI</span>
+      </div>
+      <div class="h-80"><canvas id="flowChart"></canvas></div>
+    </section>
+
+    <!-- Derivatives Positioning -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-xl p-5">
+      <h2 id="deriv-title" class="text-sm font-semibold text-slate-200 mb-4">FPI Derivatives Turnover & End-of-Day Open Interest</h2>
+      <div id="deriv-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+    </section>
+  </div>
+
+  <script>
+    let rawStore = null;
+    let currentRange = "30";
+    let activeDate = null;
+    let chartInstance = null;
+
+    const fmtCr = (n) => `${n >= 0 ? "+" : ""}₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 })} Cr`;
+
+    async function init() {
+      const res = await fetch("./data/fii_history.json?t=" + Date.now());
+      rawStore = await res.json();
+      const dates = Object.keys(rawStore.records || {});
+      if (!dates.length) {
+        document.getElementById("meta-line").textContent = "No records found yet. Run the GitHub Action workflow once to populate data.";
+        return;
+      }
+      activeDate = dates[dates.length - 1];
+      renderAll();
+    }
+
+    function setRange(r) {
+      currentRange = r;
+      document.querySelectorAll(".range-btn").forEach((b) => {
+        b.className = b.dataset.r === r
+          ? "range-btn px-3 py-1.5 rounded text-xs font-semibold bg-emerald-500 text-slate-950"
+          : "range-btn px-3 py-1.5 rounded text-xs font-semibold bg-slate-900 text-slate-300";
+      });
+      renderAll();
+    }
+
+    function renderAll() {
+      const all = Object.values(rawStore.records);
+      const sliced = currentRange === "ALL" ? all : all.slice(-Number(currentRange));
+      const rec = rawStore.records[activeDate] || sliced[sliced.length - 1];
+
+      document.getElementById("meta-line").textContent =
+        `Source: ${rec.source} Settled Data • Last Synced: ${rawStore.updated_utc} • USD/INR: ₹${rec.usd_inr}`;
+
+      // Render KPIs
+      const kpis = [
+        { label: "Total Net Equity", val: rec.summary.equity_total_cr, sub: `Session: ${rec.display_date}` },
+        { label: "Secondary Market (Exchanges)", val: rec.summary.equity_secondary_cr, sub: "NSE / BSE Cash Floor" },
+        { label: "Primary Market (IPO / QIP)", val: rec.summary.equity_primary_cr, sub: "Off-Market / Allotments" },
+        { label: "Net Debt & VRR Flows", val: rec.summary.debt_total_cr, sub: "G-Sec & Corporate Bonds" },
+      ];
+      document.getElementById("kpi-grid").innerHTML = kpis.map((k) => `
+        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+          <div class="text-xs text-slate-400">${k.label}</div>
+          <div class="text-xl font-bold mt-1 ${k.val >= 0 ? "text-emerald-400" : "text-rose-400"}">${fmtCr(k.val)}</div>
+          <div class="text-[11px] text-slate-500 mt-1">${k.sub}</div>
+        </div>
+      `).join("");
+
+      // Render Derivatives
+      document.getElementById("deriv-title").textContent = `FPI Derivatives Turnover & EOD Open Interest (${rec.display_date})`;
+      document.getElementById("deriv-grid").innerHTML = Object.entries(rec.derivatives || {}).map(([prod, d]) => `
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-3.5">
+          <div class="text-xs font-semibold text-slate-300">${prod}</div>
+          <div class="text-base font-bold mt-1 ${d.net_cr >= 0 ? "text-emerald-400" : "text-rose-400"}">Net: ${fmtCr(d.net_cr)}</div>
+          <div class="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
+            <div class="flex justify-between"><span>EOD OI Value:</span><span class="text-slate-200">₹${d.oi_cr.toLocaleString("en-IN")} Cr</span></div>
+            <div class="flex justify-between"><span>EOD Contracts:</span><span class="text-slate-200">${d.oi_contracts.toLocaleString("en-IN")}</span></div>
+          </div>
+        </div>
+      `).join("");
+
+      // Render Chart
+      let cum = 0;
+      const labels = [], secData = [], priData = [], cumData = [], isoList = [];
+      sliced.forEach((r) => {
+        cum += r.summary.equity_total_cr;
+        labels.push(r.display_date);
+        isoList.push(r.date);
+        secData.push(r.summary.equity_secondary_cr);
+        priData.push(r.summary.equity_primary_cr);
+        cumData.push(Number(cum.toFixed(2)));
+      });
+
+      if (chartInstance) chartInstance.destroy();
+      chartInstance = new Chart(document.getElementById("flowChart"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: "Secondary Equity (₹ Cr)", data: secData, backgroundColor: "#10b981", yAxisID: "y" },
+            { label: "Primary / IPO (₹ Cr)", data: priData, backgroundColor: "#f59e0b", yAxisID: "y" },
+            { label: "Cumulative Flow (₹ Cr)", data: cumData, type: "line", borderColor: "#38bdf8", backgroundColor: "#38bdf8", tension: 0.25, yAxisID: "y1" },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          onClick: (_, els) => {
+            if (els.length) {
+              activeDate = isoList[els[0].index];
+              renderAll();
+            }
+          },
+          scales: {
+            x: { ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } },
+            y: { position: "left", ticks: { color: "#94a3b8" }, grid: { color: "#1e293b" } },
+            y1: { position: "right", ticks: { color: "#38bdf8" }, grid: { drawOnChartArea: false } },
+          },
+          plugins: { legend: { labels: { color: "#cbd5e1" } } },
+        },
+      });
+    }
+
+    function exportCSV() {
+      if (!rawStore?.records) return;
+      const rows = ["Date,Source,Secondary_Equity_Cr,Primary_IPO_Cr,Total_Equity_Cr,Debt_Cr,USD_INR"];
+      Object.values(rawStore.records).forEach((r) => {
+        rows.push(`${r.date},${r.source},${r.summary.equity_secondary_cr},${r.summary.equity_primary_cr},${r.summary.equity_total_cr},${r.summary.debt_total_cr},${r.usd_inr}`);
+      });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([rows.join("\n")], { type: "text/csv" }));
+      a.download = "fii_depository_history.csv";
+      a.click();
+    }
+
+    init();
+  </script>
+</body>
+</html>
