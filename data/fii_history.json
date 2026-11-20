@@ -1,0 +1,47 @@
+{
+  "updated_utc": "2026-11-20 16:49 UTC",
+  "records": {
+    "2026-11-20": {
+      "date": "2026-11-20",
+      "display_date": "20 Nov 2026",
+      "source": "NSDL",
+      "usd_inr": 0.0,
+      "summary": {
+        "equity_secondary_cr": 7361.32,
+        "equity_primary_cr": 54.92,
+        "equity_total_cr": 7416.24,
+        "debt_total_cr": 1668.95
+      },
+      "derivatives": {
+        "Index Futures": {
+          "buy_cr": 8963.36,
+          "sell_cr": 8448.9,
+          "net_cr": 514.46,
+          "oi_contracts": 215386,
+          "oi_cr": 37247.23
+        },
+        "Index Options": {
+          "buy_cr": 5154929.55,
+          "sell_cr": 5129938.11,
+          "net_cr": 24991.44,
+          "oi_contracts": 3844535,
+          "oi_cr": 656344.31
+        },
+        "Stock Futures": {
+          "buy_cr": 144206.62,
+          "sell_cr": 141859.82,
+          "net_cr": 2346.8,
+          "oi_contracts": 6334973,
+          "oi_cr": 427407.53
+        },
+        "Stock Options": {
+          "buy_cr": 32194.43,
+          "sell_cr": 31994.54,
+          "net_cr": 199.89,
+          "oi_contracts": 1655683,
+          "oi_cr": 116284.1
+        }
+      }
+    }
+  }
+}
