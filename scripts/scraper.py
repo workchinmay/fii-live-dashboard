@@ -91,19 +91,26 @@ def fetch_depository(url: str, source: str):
     }
 
 def main():
-    try:
-        iso_date, rec = fetch_depository(NSDL_URL, "NSDL")
-    except Exception as e:
-        print(f"NSDL failed ({e}), switching to CDSL...")
-        iso_date, rec = fetch_depository(CDSL_URL, "CDSL")
-
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     store = json.loads(OUTPUT_PATH.read_text()) if OUTPUT_PATH.exists() else {"updated_utc": "", "records": {}}
-    store["records"][iso_date] = rec
+
+    for src_name, url in [("CDSL", CDSL_URL), ("NSDL", NSDL_URL)]:
+        try:
+            iso_date, rec = fetch_depository(url, src_name)
+            if iso_date not in store["records"]:
+                store["records"][iso_date] = {
+                    "date": iso_date,
+                    "display_date": rec["display_date"],
+                    "sources": {}
+                }
+            store["records"][iso_date]["sources"][src_name] = rec
+            print(f"Fetched {src_name} for {iso_date}")
+        except Exception as e:
+            print(f"Warning: {src_name} fetch failed ({e})")
+
     store["records"] = dict(sorted(store["records"].items()))
     store["updated_utc"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     OUTPUT_PATH.write_text(json.dumps(store, indent=2))
-    print(f"Saved {iso_date} from {rec['source']}")
 
 if __name__ == "__main__":
     main()
