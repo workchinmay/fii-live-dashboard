@@ -1,5 +1,5 @@
 {
-  "updated_utc": "2026-11-26 00:02 UTC",
+  "updated_utc": "2026-11-26 13:25 UTC",
   "records": {
     "2026-11-20": {
       "date": "2026-11-20",
@@ -134,6 +134,54 @@
               "net_cr": -136.23,
               "oi_contracts": 374325,
               "oi_cr": 25070.18
+            }
+          }
+        }
+      }
+    },
+    "2026-11-26": {
+      "date": "2026-11-26",
+      "display_date": "26 Nov 2026",
+      "sources": {
+        "NSDL": {
+          "date": "2026-11-26",
+          "display_date": "26 Nov 2026",
+          "source": "NSDL",
+          "usd_inr": 0.0,
+          "summary": {
+            "equity_secondary_cr": 2866.91,
+            "equity_primary_cr": 114.14,
+            "equity_total_cr": 2981.05,
+            "debt_total_cr": 2687.24
+          },
+          "derivatives": {
+            "Index Futures": {
+              "buy_cr": 5946.26,
+              "sell_cr": 4920.19,
+              "net_cr": 1026.07,
+              "oi_contracts": 162767,
+              "oi_cr": 28331.32
+            },
+            "Index Options": {
+              "buy_cr": 2856643.01,
+              "sell_cr": 2882738.67,
+              "net_cr": -26095.66,
+              "oi_contracts": 2936922,
+              "oi_cr": 500298.88
+            },
+            "Stock Futures": {
+              "buy_cr": 23961.95,
+              "sell_cr": 20255.19,
+              "net_cr": 3706.76,
+              "oi_contracts": 5978952,
+              "oi_cr": 405641.39
+            },
+            "Stock Options": {
+              "buy_cr": 22531.85,
+              "sell_cr": 22819.09,
+              "net_cr": -287.24,
+              "oi_contracts": 530894,
+              "oi_cr": 36228.92
             }
           }
         }
